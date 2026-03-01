@@ -15,7 +15,7 @@ A [pi](https://github.com/mariozechner/pi) extension that intercepts file-modify
 ## Install
 
 ```bash
-pi install github:YOUR_USERNAME/pi-confirm-changes
+pi install git:github.com/en-ver/pi-confirm-changes
 ```
 
 ## Configuration
