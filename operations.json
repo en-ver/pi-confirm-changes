@@ -1,4 +1,6 @@
 {
+  "write": "ask",
+  "edit": "ask",
   "bash": {
     "allow": [
       "ls",

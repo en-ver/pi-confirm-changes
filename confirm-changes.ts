@@ -3,7 +3,8 @@
  *
  * Intercepts file-modifying tool calls (write, edit) and bash commands.
  * Uses ~/.pi/agent/operations.json to decide which bash commands are
- * allowed, denied, or need approval. Write/edit always prompt.
+ * allowed, denied, or need approval. Write/edit default to "ask"
+ * but can be set to "allow" or "deny" in operations.json.
  *
  * Rules are loaded once on startup and refreshed on /reload.
  * If operations.json is missing, all bash commands require approval.
@@ -34,19 +35,36 @@ import { parse as shellParse } from "shell-quote";
 
 // ── Config ──────────────────────────────────────────────────────────
 
+type FilePermission = "allow" | "deny" | "ask";
+
 interface BashRules {
 	allow: string[];
 	deny: string[];
 }
 
+interface Rules {
+	write: FilePermission;
+	edit: FilePermission;
+	bash: BashRules;
+}
+
 const OPS_PATH = join(homedir(), ".pi", "agent", "operations.json");
 
-function loadRules(): BashRules {
-	const defaults: BashRules = { allow: [], deny: [] };
+function parseFilePermission(value: unknown): FilePermission {
+	if (value === "allow" || value === "deny" || value === "ask") return value;
+	return "ask";
+}
+
+function loadRules(): Rules {
+	const defaults: Rules = { write: "ask", edit: "ask", bash: { allow: [], deny: [] } };
 	try {
 		const raw = readFileSync(OPS_PATH, "utf-8");
 		const parsed = JSON.parse(raw);
-		return { ...defaults, ...parsed.bash };
+		return {
+			write: parseFilePermission(parsed.write),
+			edit: parseFilePermission(parsed.edit),
+			bash: { ...defaults.bash, ...parsed.bash },
+		};
 	} catch {
 		return defaults;
 	}
@@ -125,12 +143,16 @@ export default function confirmChanges(pi: ExtensionAPI) {
 		}
 
 		if (isToolCallEventType("write", event)) {
+			if (rules.write === "allow") return undefined;
+			if (rules.write === "deny") return { block: true, reason: "Write operations denied by operations.json" };
 			const result = await promptUser(ctx.ui, `Write: ${event.input.path}`);
 			if (result === "approve") return undefined;
 			return { block: true, reason: result === "reject" ? REJECTED : SKIPPED };
 		}
 
 		if (isToolCallEventType("edit", event)) {
+			if (rules.edit === "allow") return undefined;
+			if (rules.edit === "deny") return { block: true, reason: "Edit operations denied by operations.json" };
 			const result = await promptUser(ctx.ui, `Edit: ${event.input.path}`);
 			if (result === "approve") return undefined;
 			return { block: true, reason: result === "reject" ? REJECTED : SKIPPED };

@@ -4,7 +4,7 @@ A [pi](https://github.com/mariozechner/pi) extension that intercepts file-modify
 
 ## Features
 
-- **Write/Edit approval** — every file write or edit prompts for confirmation
+- **Write/Edit control** — configurable per-operation permission: `"allow"`, `"deny"`, or `"ask"` (default)
 - **Bash command control** — configurable allow/deny lists via `operations.json`
 - **Compound command parsing** — `cd /tmp && rm -rf *` is split and each part checked independently
 - **Three response options:**
@@ -42,7 +42,7 @@ In non-interactive mode (CI, scripts, `--mode json`), all operations are blocked
 
 ## Configuration
 
-Copy `operations.json` to `~/.pi/agent/operations.json` to configure bash command rules. If the file is missing, all bash commands will require manual approval (safe default).
+Copy `operations.json` to `~/.pi/agent/operations.json` to configure rules. If the file is missing, all operations default to `"ask"`.
 
 Rules are loaded once on startup. Use `/reload` to pick up changes.
 
@@ -50,12 +50,24 @@ Rules are loaded once on startup. Use `/reload` to pick up changes.
 
 ```json
 {
+  "write": "ask",
+  "edit": "ask",
   "bash": {
     "allow": ["ls", "cat", "grep", "find", "git status", "git log", "git diff"],
     "deny": []
   }
 }
 ```
+
+### Write/Edit permissions
+
+The `write` and `edit` fields accept one of three values:
+
+| Value | Behavior |
+|---|---|
+| `"ask"` | Prompt for approval (default) |
+| `"allow"` | Auto-approve all operations |
+| `"deny"` | Block all operations |
 
 ### Pattern matching
 
