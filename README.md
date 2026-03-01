@@ -32,6 +32,10 @@ This pulls the latest changes from the repository. Packages without a pinned ver
 pi remove git:github.com/en-ver/pi-confirm-changes
 ```
 
+## Context window impact
+
+This extension uses only event handlers (`pi.on("tool_call", ...)`), not `pi.registerTool()`. It adds nothing to the system prompt and consumes zero tokens in the agent's context window. It is safe to include in your globally loaded packages without any overhead.
+
 ## Headless mode
 
 In non-interactive mode (CI, scripts, `--mode json`), all operations are blocked by default since there is no UI to prompt for approval.
