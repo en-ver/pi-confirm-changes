@@ -5,6 +5,11 @@
  * Uses ~/.pi/agent/operations.json to decide which bash commands are
  * allowed, denied, or need approval. Write/edit always prompt.
  *
+ * Rules are loaded once on startup and refreshed on /reload.
+ * If operations.json is missing, all bash commands require approval.
+ *
+ * In non-interactive (headless) mode, all operations are blocked.
+ *
  * Pattern matching is prefix-based with word boundaries:
  *   "rm"       → matches rm, rm -rf, rm file (but not rmdir)
  *   "rm *"     → same (trailing " *" is stripped)
@@ -22,9 +27,9 @@ import {
 	type ExtensionAPI,
 	type ExtensionUIContext,
 } from "@mariozechner/pi-coding-agent";
-import { readFileSync } from "fs";
-import { join } from "path";
-import { homedir } from "os";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
 import { parse as shellParse } from "shell-quote";
 
 // ── Config ──────────────────────────────────────────────────────────
@@ -107,12 +112,17 @@ async function promptUser(ui: ExtensionUIContext, header: string): Promise<"appr
 
 // ── Extension ───────────────────────────────────────────────────────
 
+const NO_UI = "Operation blocked (no UI available for confirmation)";
 const REJECTED = "User rejected this change. Stop and ask the user what they want instead.";
 const SKIPPED = "User skipped this operation. Continue with the next step.";
 
 export default function confirmChanges(pi: ExtensionAPI) {
+	const rules = loadRules();
+
 	pi.on("tool_call", async (event, ctx) => {
-		if (!ctx.hasUI) return undefined;
+		if (!ctx.hasUI) {
+			return { block: true, reason: NO_UI };
+		}
 
 		if (isToolCallEventType("write", event)) {
 			const result = await promptUser(ctx.ui, `Write: ${event.input.path}`);
@@ -127,7 +137,6 @@ export default function confirmChanges(pi: ExtensionAPI) {
 		}
 
 		if (isToolCallEventType("bash", event)) {
-			const rules = loadRules();
 			const decision = decideBash(event.input.command, rules);
 
 			if (decision === "allow") return undefined;

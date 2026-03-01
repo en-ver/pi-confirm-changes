@@ -18,9 +18,29 @@ A [pi](https://github.com/mariozechner/pi) extension that intercepts file-modify
 pi install git:github.com/en-ver/pi-confirm-changes
 ```
 
+## Update
+
+```bash
+pi update
+```
+
+This pulls the latest changes from the repository. Packages without a pinned version (like git sources) are updated automatically.
+
+## Remove
+
+```bash
+pi remove git:github.com/en-ver/pi-confirm-changes
+```
+
+## Headless mode
+
+In non-interactive mode (CI, scripts, `--mode json`), all operations are blocked by default since there is no UI to prompt for approval.
+
 ## Configuration
 
-After installing, copy `operations.json` to `~/.pi/agent/operations.json` to configure bash command rules.
+Copy `operations.json` to `~/.pi/agent/operations.json` to configure bash command rules. If the file is missing, all bash commands will require manual approval (safe default).
+
+Rules are loaded once on startup. Use `/reload` to pick up changes.
 
 ### operations.json
 
