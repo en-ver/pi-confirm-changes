@@ -143,13 +143,12 @@ async function gate(
 	if (permission === "deny") return { block: true, reason: `${label} denied by operations.json` };
 	if (!ctx.hasUI) return { block: true, reason: `${label} blocked (no UI for confirmation)` };
 
-	const choice = await ctx.ui.select(label, ["Approve", "Reject", "Skip"]);
+	const choice = await ctx.ui.select(label, ["Approve", "Skip", "Reject & ask me"]);
 	if (choice === "Approve") return undefined;
-	if (choice === "Reject") {
-		ctx.abort();
-		return { block: true, reason: REJECTED };
-	}
-	return { block: true, reason: SKIPPED };
+	if (choice === "Skip") return { block: true, reason: SKIPPED };
+	// "Reject & ask me" or Escape — stop and ask the user
+	ctx.abort();
+	return { block: true, reason: REJECTED };
 }
 
 // ── Extension ───────────────────────────────────────────────────────
