@@ -114,6 +114,11 @@ function matchesPrefix(subCommand: string, pattern: string): boolean {
 	return subCommand === prefix || subCommand.startsWith(prefix + " ");
 }
 
+/** Check if a sub-command is a pure variable assignment (e.g. PI_DIR="/some/path"). */
+function isVariableAssignment(subCommand: string): boolean {
+	return /^[A-Za-z_][A-Za-z0-9_]*=/.test(subCommand);
+}
+
 function decideBash(command: string, rules: BashRules): FilePermission {
 	const subs = extractSubCommands(command);
 	if (subs.length === 0) return "allow";
@@ -122,6 +127,8 @@ function decideBash(command: string, rules: BashRules): FilePermission {
 
 	for (const sub of subs) {
 		if (rules.deny.some((p) => matchesPrefix(sub, p))) return "deny";
+		// Variable assignments (NAME=value) are safe — they don't execute anything
+		if (isVariableAssignment(sub)) continue;
 		if (!rules.allow.some((p) => matchesPrefix(sub, p))) allAllowed = false;
 	}
 
@@ -166,7 +173,7 @@ export default function confirmChanges(pi: ExtensionAPI) {
 		}
 
 		if (isToolCallEventType("bash", event)) {
-			return gate(decideBash(event.input.command, rules.bash), `Bash: ${event.input.command}`, ctx);
+			return gate(decideBash(event.input.command, rules.bash), `Approve bash command?`, ctx);
 		}
 
 		return undefined;
